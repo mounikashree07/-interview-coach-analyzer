@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-const STAGE = {
-  SETUP: 'setup',
-  ANSWERING: 'answering',
-  SUMMARY: 'summary',
-};
+const STAGE = { SETUP: 'setup', ANSWERING: 'answering', SUMMARY: 'summary' };
 
 export default function MockInterview() {
   const [stage, setStage] = useState(STAGE.SETUP);
@@ -22,199 +18,102 @@ export default function MockInterview() {
   const handleGenerateQuestions = async (e) => {
     e.preventDefault();
     setError('');
-    if (role.trim().length < 2) {
-      setError('Please enter a target role.');
-      return;
-    }
+    if (role.trim().length < 2) { setError('Please enter a target role.'); return; }
     try {
       setLoading(true);
       const res = await axios.post('/api/interview/questions', { role, jobDescription, count: 5 });
       setQuestions(res.data.questions);
-      setAnswers([]);
-      setFeedbackList([]);
-      setCurrentIndex(0);
+      setAnswers([]); setFeedbackList([]); setCurrentIndex(0);
       setStage(STAGE.ANSWERING);
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong generating questions.');
-    } finally {
-      setLoading(false);
-    }
+      setError(err.response?.data?.error || 'Something interrupted the setup.');
+    } finally { setLoading(false); }
   };
 
   const handleSubmitAnswer = async () => {
     setError('');
-    if (currentAnswer.trim().length < 5) {
-      setError('Please write an answer before submitting.');
-      return;
-    }
+    if (currentAnswer.trim().length < 5) { setError('Please write an answer.'); return; }
     try {
       setLoading(true);
-      const res = await axios.post('/api/interview/feedback', {
-        role,
-        question: questions[currentIndex],
-        answer: currentAnswer,
-      });
-
+      const res = await axios.post('/api/interview/feedback', { role, question: questions[currentIndex], answer: currentAnswer });
       const newAnswers = [...answers, currentAnswer];
       const newFeedback = [...feedbackList, res.data];
-      setAnswers(newAnswers);
-      setFeedbackList(newFeedback);
-      setCurrentAnswer('');
-
+      setAnswers(newAnswers); setFeedbackList(newFeedback); setCurrentAnswer('');
       if (currentIndex + 1 < questions.length) {
         setCurrentIndex(currentIndex + 1);
       } else {
-        // Save the completed session
-        const overallScore = Math.round(
-          newFeedback.reduce((sum, f) => sum + (f.score || 0), 0) / newFeedback.length
-        );
+        const overallScore = Math.round(newFeedback.reduce((s, f) => s + (f.score || 0), 0) / newFeedback.length);
         try {
-          await axios.post('/api/interview/session', {
-            role,
-            questions,
-            answers: newAnswers,
-            feedback: newFeedback.map((f) => f.feedback),
-            overallScore,
-          });
-        } catch (saveErr) {
-          console.error('Could not save session:', saveErr);
-        }
+          await axios.post('/api/interview/session', { role, questions, answers: newAnswers, feedback: newFeedback.map((f) => f.feedback), overallScore });
+        } catch {}
         setStage(STAGE.SUMMARY);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong getting feedback.');
-    } finally {
-      setLoading(false);
-    }
+      setError(err.response?.data?.error || 'Something interrupted the analysis.');
+    } finally { setLoading(false); }
   };
 
-  const handleRestart = () => {
-    setStage(STAGE.SETUP);
-    setRole('');
-    setJobDescription('');
-    setQuestions([]);
-    setCurrentIndex(0);
-    setCurrentAnswer('');
-    setAnswers([]);
-    setFeedbackList([]);
-    setError('');
-  };
-
-  const overallScore =
-    feedbackList.length > 0
-      ? Math.round(feedbackList.reduce((sum, f) => sum + (f.score || 0), 0) / feedbackList.length)
-      : 0;
+  const overallScore = feedbackList.length > 0
+    ? Math.round(feedbackList.reduce((s, f) => s + (f.score || 0), 0) / feedbackList.length) : 0;
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-2xl font-semibold mb-4">Mock Interview Q&amp;A</h2>
-
-      {stage === STAGE.SETUP && (
-        <form onSubmit={handleGenerateQuestions} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Target Role</label>
-            <input
-              type="text"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="e.g. Frontend Developer"
-              className="block w-full text-sm border border-gray-300 rounded-md p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Job Description (optional)</label>
-            <textarea
-              rows={4}
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              placeholder="Paste a job description for more tailored questions..."
-              className="block w-full text-sm border border-gray-300 rounded-md p-2"
-            />
-          </div>
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-          >
-            {loading ? 'Generating questions...' : 'Start Mock Interview'}
-          </button>
-        </form>
-      )}
-
-      {stage === STAGE.ANSWERING && (
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Question {currentIndex + 1} of {questions.length}
-          </p>
-          <p className="text-lg font-medium">{questions[currentIndex]}</p>
-          <textarea
-            rows={6}
-            value={currentAnswer}
-            onChange={(e) => setCurrentAnswer(e.target.value)}
-            placeholder="Type your answer here..."
-            className="block w-full text-sm border border-gray-300 rounded-md p-2"
-          />
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-          <button
-            onClick={handleSubmitAnswer}
-            disabled={loading}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-          >
-            {loading ? 'Getting feedback...' : currentIndex + 1 < questions.length ? 'Submit & Next' : 'Submit & Finish'}
-          </button>
-
-          {feedbackList.length > 0 && feedbackList[feedbackList.length - 1] && currentIndex > 0 && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm">
-              <p className="font-medium">Feedback on previous answer:</p>
-              <p className="text-gray-700 mt-1">{feedbackList[feedbackList.length - 1].feedback}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {stage === STAGE.SUMMARY && (
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold">Overall Score</h3>
-            <p className="text-3xl font-bold text-indigo-600">{overallScore}/100</p>
-          </div>
-
-          {questions.map((q, i) => (
-            <div key={i} className="border border-gray-200 rounded-md p-4">
-              <p className="font-medium">{q}</p>
-              <p className="text-sm text-gray-600 mt-2 italic">Your answer: {answers[i]}</p>
-              <div className="mt-3 text-sm">
-                <p className="font-medium">Score: {feedbackList[i]?.score}/100</p>
-                <p className="mt-1">{feedbackList[i]?.feedback}</p>
-                {feedbackList[i]?.strengths?.length > 0 && (
-                  <div className="mt-2">
-                    <p className="font-medium text-green-700">Strengths:</p>
-                    <ul className="list-disc list-inside text-gray-700">
-                      {feedbackList[i].strengths.map((s, j) => <li key={j}>{s}</li>)}
-                    </ul>
-                  </div>
-                )}
-                {feedbackList[i]?.improvements?.length > 0 && (
-                  <div className="mt-2">
-                    <p className="font-medium text-amber-700">Improvements:</p>
-                    <ul className="list-disc list-inside text-gray-700">
-                      {feedbackList[i].improvements.map((s, j) => <li key={j}>{s}</li>)}
-                    </ul>
-                  </div>
-                )}
+    <div className="min-h-screen bg-obsidian text-porcelain">
+      <div className="max-w-2xl mx-auto px-8 py-24">
+        {stage === STAGE.SETUP && (
+          <>
+            <p className="font-ui text-[11px] tracking-[0.2em] text-taupe uppercase mb-4">Interview practice</p>
+            <h1 className="font-editorial text-5xl mb-14">Your next conversation.</h1>
+            <form onSubmit={handleGenerateQuestions} className="space-y-8">
+              <div>
+                <label className="block font-ui text-[11px] tracking-wide text-taupe uppercase mb-3">Role</label>
+                <input type="text" value={role} onChange={(e) => setRole(e.target.value)} placeholder="Software Engineer"
+                  className="w-full bg-transparent border-b border-qborder pb-3 text-[15px] text-porcelain placeholder-taupe/30 focus:outline-none focus:border-champagne transition-colors duration-300" />
               </div>
-            </div>
-          ))}
+              <div>
+                <label className="block font-ui text-[11px] tracking-wide text-taupe uppercase mb-3">Job description (optional)</label>
+                <textarea rows={4} value={jobDescription} onChange={(e) => setJobDescription(e.target.value)}
+                  className="w-full bg-graphite border border-qborder rounded-md px-4 py-3 text-sm text-porcelain placeholder-taupe/40 focus:outline-none focus:border-champagne transition-colors duration-300" />
+              </div>
+              {error && <p className="font-ui text-sm text-rose">{error}</p>}
+              <button type="submit" disabled={loading}
+                className="font-ui text-[13px] tracking-wide bg-champagne text-obsidian px-8 py-3 rounded-sm hover:brightness-110 transition-all duration-300 disabled:opacity-40">
+                {loading ? 'Preparing…' : 'Begin interview →'}
+              </button>
+            </form>
+          </>
+        )}
 
-          <button
-            onClick={handleRestart}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Start Another Mock Interview
-          </button>
-        </div>
-      )}
+        {stage === STAGE.ANSWERING && (
+          <div>
+            <p className="font-ui text-taupe text-sm mb-8">{String(currentIndex + 1).padStart(2, '0')} / {String(questions.length).padStart(2, '0')}</p>
+            <p className="font-editorial text-3xl leading-snug mb-10">{questions[currentIndex]}</p>
+            <textarea rows={6} value={currentAnswer} onChange={(e) => setCurrentAnswer(e.target.value)} placeholder="Your answer..."
+              className="w-full bg-graphite border border-qborder rounded-md px-4 py-3 text-sm text-porcelain placeholder-taupe/40 focus:outline-none focus:border-champagne transition-colors duration-300" />
+            {error && <p className="font-ui text-sm text-rose mt-3">{error}</p>}
+            <button onClick={handleSubmitAnswer} disabled={loading}
+              className="mt-6 font-ui text-[13px] tracking-wide bg-champagne text-obsidian px-8 py-3 rounded-sm hover:brightness-110 transition-all duration-300 disabled:opacity-40">
+              {loading ? 'Evaluating…' : currentIndex + 1 < questions.length ? 'Continue →' : 'Finish →'}
+            </button>
+          </div>
+        )}
+
+        {stage === STAGE.SUMMARY && (
+          <div className="space-y-16">
+            <div>
+              <p className="font-ui text-[11px] tracking-wide text-taupe uppercase mb-2">Overall performance</p>
+              <p className="font-editorial text-8xl text-champagne">{overallScore}</p>
+            </div>
+            {questions.map((q, i) => (
+              <div key={i} className="border-t border-qborder pt-8">
+                <p className="font-editorial text-2xl mb-3">{q}</p>
+                <p className="font-ui text-sm text-taupe italic mb-4">"{answers[i]}"</p>
+                <p className="font-ui text-[11px] tracking-wide text-champagne uppercase mb-2">{feedbackList[i]?.score} / 100</p>
+                <p className="font-ui text-sm text-porcelain/80 leading-relaxed">{feedbackList[i]?.feedback}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

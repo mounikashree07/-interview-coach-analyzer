@@ -1,3 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
+
+/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
+/* Tailwind directives are processed during the build. */
 @tailwind components;
 @tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
+
+:root {
+  --obsidian: #090b12;
+  --espresso: #12131a;
+  --graphite: #1c2330;
+
+  --porcelain: #f3efe8;
+  --taupe: #d9d0c2;
+
+  --champagne: #f0c98a;
+  --rose: #e8a7b1;
+  --lilac: #c9c1ff;
+
+  --border: rgba(243, 239, 232, 0.12);
+  --border-hover: rgba(243, 239, 232, 0.18);
+}
+
+body {
+  background: transparent;
+  color: var(--porcelain);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  background: transparent;
+  min-height: 100vh;
+}
+
+.bg-obsidian {
+  background-color: rgba(8, 11, 18, 0.18) !important;
+}
+
+.bg-obsidian\/90 {
+  background: rgba(11, 14, 22, 0.4) !important;
+  backdrop-filter: blur(12px);
+}
+
+.bg-espresso {
+  background: rgba(17, 16, 14, 0.22) !important;
+}
+
+.text-porcelain { color: var(--porcelain) !important; }
+.text-taupe { color: var(--taupe) !important; }
+.text-champagne { color: var(--champagne) !important; }
+.text-obsidian { color: var(--obsidian) !important; }
+
+.font-editorial { font-family: 'Instrument Serif', serif; font-style: italic; }
+.font-ui { font-family: 'Inter', sans-serif; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
